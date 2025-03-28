@@ -1,178 +1,194 @@
 #!/bin/bash
 
-# Fånga upp avbrytningssignaler
+# Configurable variables
+BLINK_COUNT=5
+
+# Language settings - change these to switch language
+HACK_MESSAGE="DU HAR BLIVIT HACKAD!"
+APRIL_MESSAGE="APRIL APRIL!"
+DELETING_TEXT="Raderar:"
+DONE_TEXT="KLAR"
+ANIMATION_ENDED_TEXT="Animation avslutad efter"
+SECONDS_TEXT="sekunder."
+
+# Add some example language settings as comments
+# Swedish:
+# HACK_MESSAGE="DU HAR BLIVIT HACKAD!"
+# APRIL_MESSAGE="APRIL APRIL!"
+# DELETING_TEXT="Raderar:"
+# DONE_TEXT="KLAR"
+# ANIMATION_ENDED_TEXT="Animation avslutad efter"
+# SECONDS_TEXT="sekunder."
+
+# English:
+# HACK_MESSAGE="YOU HAVE BEEN HACKED!"
+# APRIL_MESSAGE="APRIL FOOLS!"
+# DELETING_TEXT="Deleting:"
+# DONE_TEXT="DONE"
+# ANIMATION_ENDED_TEXT="Animation ended after"
+# SECONDS_TEXT="seconds."
+
+# German:
+# HACK_MESSAGE="SIE WURDEN GEHACKT!"
+# APRIL_MESSAGE="APRIL APRIL!"
+# DELETING_TEXT="Löschen:"
+# DONE_TEXT="FERTIG"
+# ANIMATION_ENDED_TEXT="Animation beendet nach"
+# SECONDS_TEXT="Sekunden."
+
+# Script runtime
+MAX_RUNTIME=30
+
+# Catch interruption signals
 trap "" SIGINT SIGTERM SIGTSTP
 
-# Inaktivera tangentbordets avbrottskombinationer
+# Disable keyboard interrupt combinations
 stty -echo
 stty intr ""
 stty susp ""
 stty quit ""
 
-# Starta en timer för att avsluta efter 10 sekunder
+# Start a timer to terminate after MAX_RUNTIME seconds
 SECONDS=0
-MAX_RUNTIME=30
 
-# Visa hackat-meddelande vid start
-function show_hacked_message {
+# Display flashing message at start
+function show_blinking_message {
+    local message=$1
     clear
     
-    # Hämta skärmstorlek
+    # Get screen size
     local rows=$(tput lines)
     local cols=$(tput cols)
     
-    # Centrera texten
-    local message="DU HAR BLIVIT HACKAD!"
-    local msg_length=${#message}
+    # Function to draw any message in ASCII-art style
+    # Adapts the frame dynamically to the text length
+    function draw_message_text {
+        local text=$1
+        
+        # Calculate frame width based on text length 
+        # (add extra space for margins)
+        local padding=4  # Extra space on each side of the text
+        local border_width=$((${#text} + padding*2))
+        
+        # Create a row of asterisks with the right length
+        local border_line=""
+        for ((i=0; i<border_width; i++)); do
+            border_line+="*"
+        done
+        
+        # Create an empty row with asterisks only at the edges
+        local empty_line="*"
+        for ((i=0; i<(border_width-2); i++)); do
+            empty_line+=" "
+        done
+        empty_line+="*"
+        
+        # Create the row with the text centered
+        local text_padding=""
+        local padding_each_side=$(( (border_width - ${#text} - 2) / 2 ))
+        for ((i=0; i<padding_each_side; i++)); do
+            text_padding+=" "
+        done
+        local text_line="*${text_padding}${text}${text_padding}"
+        
+        # If the text length + padding is odd, add an extra space
+        if [ $(( (border_width - ${#text} - 2) % 2 )) -ne 0 ]; then
+            text_line+=" "
+        fi
+        text_line+="*"
+        
+        # Calculate starting positions for centering on screen
+        local row_start=$((rows/2 - 2))
+        local col_start=$((cols/2 - border_width/2))
+        
+        # Draw the frame and text
+        tput cup $row_start $col_start
+        echo "$border_line"
+        
+        tput cup $((row_start+1)) $col_start
+        echo "$empty_line"
+        
+        tput cup $((row_start+2)) $col_start
+        echo "$text_line"
+        
+        tput cup $((row_start+3)) $col_start
+        echo "$empty_line"
+        
+        tput cup $((row_start+4)) $col_start
+        echo "$border_line"
+    }
     
-    # Gör texten stor i ASCII-art stil och blinka den några gånger
-    for blink in {1..5}; do
-        if [ $((blink % 2)) -eq 1 ]; then
-            # Visa texten
+    # Blink the text exactly the number of times specified in BLINK_COUNT
+    # Each blink consists of showing the text and then hiding it
+    blinks_completed=0
+    show_text=true
+    
+    while [ $blinks_completed -lt $BLINK_COUNT ]; do
+        if $show_text; then
+            # Show the text
             tput bold
-            tput setaf 1  # Röd text
-            
-            # Rita ut stor text centrerat
-            tput cup $((rows/2 - 4)) $(((cols-60)/2))
-            echo "██████  ██    ██    ██   ██  █████  ██████  "
-            tput cup $((rows/2 - 3)) $(((cols-60)/2))
-            echo "██   ██ ██    ██    ██   ██ ██   ██ ██   ██ "
-            tput cup $((rows/2 - 2)) $(((cols-60)/2))
-            echo "██   ██ ██    ██    ███████ ███████ ██████  "
-            tput cup $((rows/2 - 1)) $(((cols-60)/2))
-            echo "██   ██ ██    ██    ██   ██ ██   ██ ██   ██ "
-            tput cup $((rows/2)) $(((cols-60)/2))
-            echo "██████   ██████     ██   ██ ██   ██ ██   ██ "
-            
-            tput cup $((rows/2 + 2)) $(((cols-60)/2))
-            echo "██████  ██      ██ ██    ██ ██ ████████ "
-            tput cup $((rows/2 + 3)) $(((cols-60)/2))
-            echo "██   ██ ██      ██ ██    ██ ██    ██    "
-            tput cup $((rows/2 + 4)) $(((cols-60)/2))
-            echo "██████  ██      ██ ██    ██ ██    ██    "
-            tput cup $((rows/2 + 5)) $(((cols-60)/2))
-            echo "██   ██ ██      ██  ██  ██  ██    ██    "
-            tput cup $((rows/2 + 6)) $(((cols-60)/2))
-            echo "██████  ███████ ██   ████   ██    ██    "
-            
-            tput cup $((rows/2 + 9)) $(((cols-40)/2))
-            echo " ██   ██  █████   ██████ ██   ██  █████  ██████  "
-            tput cup $((rows/2 + 10)) $(((cols-40)/2))
-            echo " ██   ██ ██   ██ ██      ██  ██  ██   ██ ██   ██ "
-            tput cup $((rows/2 + 11)) $(((cols-40)/2))
-            echo " ███████ ███████ ██      █████   ███████ ██   ██ "
-            tput cup $((rows/2 + 12)) $(((cols-40)/2))
-            echo " ██   ██ ██   ██ ██      ██  ██  ██   ██ ██   ██ "
-            tput cup $((rows/2 + 13)) $(((cols-40)/2))
-            echo " ██   ██ ██   ██  ██████ ██   ██ ██   ██ ██████  "
+            tput setaf 1  # Red text
+            draw_message_text "$message"
+            show_text=false
         else
-            # Dölj texten (rensa skärmen)
+            # Hide the text
             clear
+            show_text=true
+            blinks_completed=$((blinks_completed + 1))
         fi
         
-        # Vänta en kort stund
+        # Wait a short time
         sleep 0.5
     done
     
-    # Visa texten en sista gång
+    # Regardless of whether the last step was to show or hide the text, 
+    # show the text one last time before we continue
     tput bold
-    tput setaf 1  # Röd text
+    tput setaf 1  # Red text
+    draw_message_text "$message"
     
-    # Rita ut stor text centrerat
-    tput cup $((rows/2 - 4)) $(((cols-60)/2))
-    echo "██████  ██    ██    ██   ██  █████  ██████  "
-    tput cup $((rows/2 - 3)) $(((cols-60)/2))
-    echo "██   ██ ██    ██    ██   ██ ██   ██ ██   ██ "
-    tput cup $((rows/2 - 2)) $(((cols-60)/2))
-    echo "██   ██ ██    ██    ███████ ███████ ██████  "
-    tput cup $((rows/2 - 1)) $(((cols-60)/2))
-    echo "██   ██ ██    ██    ██   ██ ██   ██ ██   ██ "
-    tput cup $((rows/2)) $(((cols-60)/2))
-    echo "██████   ██████     ██   ██ ██   ██ ██   ██ "
+    # Show message for an additional 0.5 seconds before next phase
+    sleep 0.5
     
-    tput cup $((rows/2 + 2)) $(((cols-60)/2))
-    echo "██████  ██      ██ ██    ██ ██ ████████ "
-    tput cup $((rows/2 + 3)) $(((cols-60)/2))
-    echo "██   ██ ██      ██ ██    ██ ██    ██    "
-    tput cup $((rows/2 + 4)) $(((cols-60)/2))
-    echo "██████  ██      ██ ██    ██ ██    ██    "
-    tput cup $((rows/2 + 5)) $(((cols-60)/2))
-    echo "██   ██ ██      ██  ██  ██  ██    ██    "
-    tput cup $((rows/2 + 6)) $(((cols-60)/2))
-    echo "██████  ███████ ██   ████   ██    ██    "
-    
-    tput cup $((rows/2 + 9)) $(((cols-40)/2))
-    echo " ██   ██  █████   ██████ ██   ██  █████  ██████  "
-    tput cup $((rows/2 + 10)) $(((cols-40)/2))
-    echo " ██   ██ ██   ██ ██      ██  ██  ██   ██ ██   ██ "
-    tput cup $((rows/2 + 11)) $(((cols-40)/2))
-    echo " ███████ ███████ ██      █████   ███████ ██   ██ "
-    tput cup $((rows/2 + 12)) $(((cols-40)/2))
-    echo " ██   ██ ██   ██ ██      ██  ██  ██   ██ ██   ██ "
-    tput cup $((rows/2 + 13)) $(((cols-40)/2))
-    echo " ██   ██ ██   ██  ██████ ██   ██ ██   ██ ██████  "
-    
-    # Visa meddelande i ytterligare 2 sekunder innan nästa fas
-    sleep 2
-    
-    # Återställ färgen
+    # Reset color
     tput sgr0
     
-    # Rensa skärmen innan animationen startar
+    # Clear screen before animation starts
     clear
 }
 
-# Återställ terminalinställningar när skriptet avslutas
+# Reset terminal settings when script exits
 function cleanup {
-    # Visa "April April" över hela skärmen
+    # Show ending message
     clear
     
-    # Hämta skärmstorlek
+    # Get screen size
     local rows=$(tput lines)
     local cols=$(tput cols)
     
-    # Centrera texten
-    local message="APRIL APRIL!"
-    local msg_length=${#message}
-    
-    # Vänta en kort stund först
+    # Wait a short time first
     sleep 0.5
     
-    # Gör texten stor i ASCII-art stil
+    # Show the ending message
     tput bold
-    tput setaf 1  # Röd text
+    tput setaf 1  # Red text
     
-    # Rita ut stor text centrerat
-    tput cup $((rows/2 - 4)) $(((cols-60)/2))
-    echo " █████  ██████  ██████  ██ ██      "
-    tput cup $((rows/2 - 3)) $(((cols-60)/2))
-    echo "██   ██ ██   ██ ██   ██ ██ ██      "
-    tput cup $((rows/2 - 2)) $(((cols-60)/2))
-    echo "███████ ██████  ██████  ██ ██      "
-    tput cup $((rows/2 - 1)) $(((cols-60)/2))
-    echo "██   ██ ██      ██   ██ ██ ██      "
-    tput cup $((rows/2)) $(((cols-60)/2))
-    echo "██   ██ ██      ██   ██ ██ ███████ "
+    # Center the message
+    local msg_length=${#APRIL_MESSAGE}
+    local start_col=$(( (cols - msg_length) / 2 ))
+    local start_row=$(( rows / 2 ))
     
-    tput cup $((rows/2 + 2)) $(((cols-60)/2))
-    echo " █████  ██████  ██████  ██ ██      "
-    tput cup $((rows/2 + 3)) $(((cols-60)/2))
-    echo "██   ██ ██   ██ ██   ██ ██ ██      "
-    tput cup $((rows/2 + 4)) $(((cols-60)/2))
-    echo "███████ ██████  ██████  ██ ██      "
-    tput cup $((rows/2 + 5)) $(((cols-60)/2))
-    echo "██   ██ ██      ██   ██ ██ ██      "
-    tput cup $((rows/2 + 6)) $(((cols-60)/2))
-    echo "██   ██ ██      ██   ██ ██ ███████ "
+    tput cup $start_row $start_col
+    echo "$APRIL_MESSAGE"
     
-    # Återställ färgen
+    # Reset color
     tput sgr0
     
-    # Visa meddelande om att skriptet avslutats
+    # Show message that the script has ended
     tput cup $((rows-2)) 0
-    echo "Animation avslutad efter $SECONDS sekunder."
+    echo "$ANIMATION_ENDED_TEXT $SECONDS $SECONDS_TEXT"
     
-    # Återställ terminalen
+    # Reset terminal
     stty echo
     stty sane
     tput cnorm
@@ -180,17 +196,17 @@ function cleanup {
     exit
 }
 
-# Se till att rensa upp även om något går fel
+# Make sure to clean up even if something goes wrong
 trap cleanup EXIT
 
-# Göm markören
+# Hide cursor
 tput civis
 
-# Funktion för att rita dödskallen i olika stadier
+# Function to draw the skull in different stages
 function draw_skull {
     local stage=$1
     
-    # Flytta till övre vänstra hörnet
+    # Move to upper left corner
     tput cup 0 0
     
     case $stage in
@@ -245,7 +261,7 @@ function draw_skull {
     esac
 }
 
-# Dela upp skärmen i två tydliga sektioner
+# Split the screen into two distinct sections
 function draw_separator {
     local rows=$(tput lines)
     for ((i=0; i<rows; i++)); do
@@ -254,80 +270,80 @@ function draw_separator {
     done
 }
 
-# Simulera radering av filer från /etc (utan att faktiskt radera)
+# Simulate deletion of files from /etc (without actually deleting)
 function fake_delete_files {
     local offset=${1:-0}
     
-    # Beräkna kolumnposition för fildelen (starta efter separator)
+    # Calculate column position for file section (start after separator)
     local col=22
     local row=0
     
-    # Hämta lista på filer i /etc med offset
+    # Get list of files in /etc with offset
     local files=$(ls /etc | tail -n +$offset | head -5)
     
-    # Om ingen fil hittades (t.ex. om offset är för stort), använd de första 5
+    # If no file was found (e.g., if offset is too large), use the first 5
     if [ -z "$files" ]; then
         files=$(ls /etc | head -5)
     fi
     
     for file in $files; do
-        # Positionera markören i fildelen
+        # Position the cursor in the file section
         tput cup $row $col
         
-        # Rensa resten av raden först för att förhindra överlagring
+        # Clear the rest of the line first to prevent overlapping
         tput el
         
-        # Visa "radering" av filen med begränsad längd för att undvika radbrytning
-        local message="Raderar: /etc/$file"
+        # Show "deletion" of the file with limited length to avoid line breaks
+        local message="$DELETING_TEXT /etc/$file"
         if [ ${#message} -gt 35 ]; then
             message="${message:0:32}..."
         fi
         echo -n "$message "
         
-        # Öka radnummer för nästa utskrift
+        # Increase row number for next print
         row=$((row + 1))
         
-        # Börja om från toppen om vi når slutet av skärmen
+        # Start over from the top if we reach the end of the screen
         if [ $row -gt $(($(tput lines) - 2)) ]; then
             row=0
         fi
     done
     
-    # Separata loop för att visa "KLAR" status med fördröjning
+    # Separate loop to show "DONE" status with delay
     row=0
     for file in $files; do
-        tput cup $row $((col + 36))  # Position efter filnamnet
-        echo "KLAR"
+        tput cup $row $((col + 36))  # Position after filename
+        echo "$DONE_TEXT"
         row=$((row + 1))
         
-        # Börja om från toppen om vi når slutet av skärmen
+        # Start over from the top if we reach the end of the screen
         if [ $row -gt $(($(tput lines) - 2)) ]; then
             row=0
         fi
     done
 }
 
-# Huvudprogram - Visa hackad meddelande först
-show_hacked_message
+# Main program - Show flashing message first
+show_blinking_message "$HACK_MESSAGE"
 
-# Animera dödskallen
-draw_separator  # Rita sidoseparatorn en gång i början
+# Animate the skull
+draw_separator  # Draw the side separator once at the beginning
 
 start_time=$SECONDS
 while [ $SECONDS -lt $MAX_RUNTIME ]; do
     for i in {1..4}; do
-        # Rita dödskallen i sitt nuvarande stadium
+        # Draw the skull in its current stage
         draw_skull $i
         
-        # Visa filer som raderas
-        # Använd olika listor för varje stadium för variation
+        # Show files being deleted
+        # Use different lists for each stage for variation
         offset=$((i * 5))
         fake_delete_files $offset
         
-        # Kort paus för animationen
+        # Short pause for animation
         sleep 0.3
         
-        # Avsluta om tiden överskridits
+        # Exit if time has been exceeded
         if [ $SECONDS -ge $MAX_RUNTIME ]; then
             break
         fi
