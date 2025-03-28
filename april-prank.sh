@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configurable variables
-BLINK_COUNT=5
+BLINK_COUNT=8
 
 # Language settings - change these to switch language
 HACK_MESSAGE="DU HAR BLIVIT HACKAD!"
