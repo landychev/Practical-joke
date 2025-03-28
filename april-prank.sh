@@ -3,6 +3,9 @@
 # Configurable variables
 BLINK_COUNT=8
 
+# Script runtime
+MAX_RUNTIME=30
+
 # Language settings - change these to switch language
 HACK_MESSAGE="DU HAR BLIVIT HACKAD!"
 APRIL_MESSAGE="APRIL APRIL!"
@@ -35,9 +38,6 @@ SECONDS_TEXT="sekunder."
 # DONE_TEXT="FERTIG"
 # ANIMATION_ENDED_TEXT="Animation beendet nach"
 # SECONDS_TEXT="Sekunden."
-
-# Script runtime
-MAX_RUNTIME=30
 
 # Catch interruption signals
 trap "" SIGINT SIGTERM SIGTSTP
